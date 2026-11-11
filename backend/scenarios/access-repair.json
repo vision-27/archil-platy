@@ -1,0 +1,19 @@
+{
+  "id": "access-repair",
+  "name": "Paid customers missing access",
+  "synthetic": true,
+  "company": { "id": "demo-company", "name": "Cedar Studio", "description": "Fictional subscription business; all records and integrations are simulated." },
+  "policy": { "id": "policy-access-1", "text": "Grant access only to paid customers whose CRM status is active. Never grant access while an account is on hold. Process an event at most once. Do not guess missing customer identities or retry an uncertain write." },
+  "context": {
+    "crm": [{"id":"cus-alex","name":"Alex Rivera","status":"active"},{"id":"cus-blair","name":"Blair Chen","status":"on_hold"},{"id":"cus-cam","name":"Cam Patel","status":"active"}],
+    "billing": [{"id":"inv-alex","customerId":"cus-alex","status":"paid"},{"id":"inv-blair","customerId":"cus-blair","status":"paid"},{"id":"inv-cam","customerId":"cus-cam","status":"paid"}],
+    "onboarding": [{"customerId":"cus-alex","access":false},{"customerId":"cus-blair","access":false},{"customerId":"cus-cam","access":false}]
+  },
+  "scenarios": [
+    {"id":"normal-paid","name":"Paid, active customer","customerId":"cus-alex","eventId":"evt-normal","deliveries":1,"fault":null,"expected":{"grantCount":1,"access":true,"pendingReview":false}},
+    {"id":"customer-on-hold","name":"Paid customer on hold","customerId":"cus-blair","eventId":"evt-hold","deliveries":1,"fault":null,"expected":{"grantCount":0,"access":false,"pendingReview":false}},
+    {"id":"duplicate-event","name":"Same event delivered twice","customerId":"cus-cam","eventId":"evt-duplicate","deliveries":2,"fault":null,"expected":{"grantCount":1,"access":true,"pendingReview":false}},
+    {"id":"missing-identity","name":"Missing customer identity","customerId":null,"eventId":"evt-missing","deliveries":1,"fault":null,"expected":{"grantCount":0,"access":false,"pendingReview":false}},
+    {"id":"uncertain-write","name":"Access grant succeeded but response was lost","customerId":"cus-alex","eventId":"evt-timeout","deliveries":2,"fault":"response_lost","expected":{"grantCount":1,"access":true,"pendingReview":true}}
+  ]
+}

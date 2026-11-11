@@ -1,0 +1,8 @@
+client,deal_id,signed_agreement,brand_assets,workspace_status,kickoff_status
+Acme Logistics,D001,true,true,not_created,not_scheduled
+Birch Studio,D002,true,true,not_created,not_scheduled
+Evergreen Solar,D005,true,false,not_created,not_scheduled
+Indigo Finance,D009,true,true,created,scheduled
+Juniper Goods,D010,false,true,not_created,not_scheduled
+Oak Dental,D015,true,true,created,scheduled
+Tidal Media,D020,true,true,not_created,not_scheduled

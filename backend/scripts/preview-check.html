@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Generated app bridge check</title>
+<style>body{font:15px system-ui;margin:20px;background:#f5f7fa}iframe{width:100%;height:760px;border:1px solid #ccd}pre{white-space:pre-wrap;max-height:220px;overflow:auto}button,select{font:inherit;margin:8px;padding:8px}</style>
+<h1>Generated app bridge check</h1><p>Developer verification harness. Synthetic data; each enabled request uses real Archil compute.</p>
+<label>Saved version <select id="version"></select></label><button id="enable">Enable interactive preview</button><span id="state">Disabled</span>
+<pre id="result" aria-live="polite">No requests yet</pre><iframe id="preview" title="Generated onboarding app" sandbox="allow-scripts"></iframe>
+<script>
+const frame=document.querySelector('#preview'), select=document.querySelector('#version'), state=document.querySelector('#state'), result=document.querySelector('#result');
+let enabled=false,busy=false,count=0;
+async function api(path,body){const response=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json','X-Platy-Demo':'1'},body:JSON.stringify(body)}:{});const value=await response.json();if(!response.ok)throw Error(value.error?.message||'Request failed');return value;}
+function choose(){enabled=false;count=0;state.textContent='Disabled';frame.src='/api/company/versions/'+select.value+'/preview';}
+select.onchange=choose;document.querySelector('#enable').onclick=()=>{enabled=true;state.textContent='Enabled (10 requests maximum)';};
+api('/api/company').then(workspace=>{for(const v of workspace.versions.filter(v=>['passed','approved'].includes(v.status))){const o=document.createElement('option');o.value=v.id;o.textContent='v'+v.number+' — '+(v.policyApplied?'Finance policy':'Original SOP');select.append(o)}if(select.options.length){select.selectedIndex=select.options.length-1;choose()}});
+window.addEventListener('message',async event=>{
+ if(event.source!==frame.contentWindow||!event.data||event.data.type!=='platy:run')return;
+ const {requestId,input}=event.data;if(typeof requestId!=='string'||requestId.length>160||!input||typeof input!=='object'||Array.isArray(input)||JSON.stringify(input).length>12000)return;
+ const sender=event.source,versionId=select.value;const reply=value=>{if(sender===frame.contentWindow&&versionId===select.value)sender.postMessage({type:'platy:result',requestId,...value},'*')};
+ if(!enabled||busy||count>=10){reply({ok:false,error:'Enable the preview and wait for the current request.'});return;}
+ busy=true;select.disabled=true;count++;result.textContent='Submitted input:\n'+JSON.stringify(input,null,2);
+ try{let {job}=await api('/api/company/run',{requestKey:crypto.randomUUID(),versionId,input});for(let i=0;i<180;i++){({job}=await api('/api/company/jobs/'+job.id));if(job.status==='completed'){result.textContent=JSON.stringify({jobId:job.id,input,output:job.result.output},null,2);reply({ok:true,output:job.result.output});return}if(['failed','interrupted'].includes(job.status))throw Error(job.error?.message||'Execution failed');await new Promise(r=>setTimeout(r,1000))}throw Error('Execution is still pending; inspect its job before retrying.');}
+ catch(error){result.textContent+='\nERROR: '+error.message;reply({ok:false,error:error.message})}finally{busy=false;select.disabled=false}
+});
+</script></html>

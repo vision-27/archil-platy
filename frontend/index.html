@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platyform</title>
+<link rel="icon" href="/img/reading.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="platform">
+  <aside id="sidebar" class="sidebar" aria-label="Workspace navigation"></aside>
+  <div class="workspace">
+    <header id="topbar" class="topbar"></header>
+    <main id="content" tabindex="-1"></main>
+    <section id="app-panel" class="app-panel" hidden>
+      <div id="app-toolbar"></div>
+      <div id="preview-host" class="preview"></div>
+      <div id="app-status" aria-live="polite"></div>
+    </section>
+  </div>
+</div>
+<dialog id="evidence-dialog"><div id="evidence-content"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/src/company-app.js"></script>
+</body>
+</html>

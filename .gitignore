@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.data/
+*.log
+dist/
+*.zip
+*.sqlite
+*.sqlite3
+*.db
+CLAUDE-HANDOFF.md
+CLAUDE-STATUS.md
+FRONTEND-HANDOFF.md

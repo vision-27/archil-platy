@@ -1,0 +1,21 @@
+deal_id,client,value_usd,stage,owner,close_date
+D001,Acme Logistics,18000,closed_won,Maya,2026-11-01
+D002,Birch Studio,8000,closed_won,Leo,2026-11-02
+D003,Cedar Health,24000,proposal,Maya,2026-11-20
+D004,Delta Foods,16000,negotiation,Leo,2026-11-18
+D005,Evergreen Solar,32000,closed_won,Sara,2026-10-28
+D006,Fern Retail,12000,discovery,Sara,2026-11-25
+D007,Granite Labs,22000,closed_lost,Maya,2026-10-30
+D008,Harbor Travel,15000,proposal,Leo,2026-11-21
+D009,Indigo Finance,28000,closed_won,Sara,2026-10-25
+D010,Juniper Goods,10000,closed_won,Maya,2026-11-03
+D011,Kite Energy,21000,negotiation,Leo,2026-11-19
+D012,Lumen Works,14000,discovery,Sara,2026-11-28
+D013,Maple Homes,9000,closed_won,Maya,2026-11-04
+D014,Nimbus Cloud,36000,proposal,Leo,2026-11-22
+D015,Oak Dental,11000,closed_won,Sara,2026-10-29
+D016,Pine Fitness,13000,negotiation,Maya,2026-11-23
+D017,Quartz Design,7000,closed_lost,Leo,2026-10-26
+D018,River Coffee,17000,proposal,Sara,2026-11-24
+D019,Summit Tools,26000,discovery,Maya,2026-11-30
+D020,Tidal Media,19000,closed_won,Leo,2026-10-27
