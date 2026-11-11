@@ -1,5 +1,25 @@
 # Backend validation — 10 November 2026 (Pacific)
 
+## Current platform: three different workflows
+
+The redesigned UI has Connections, Discoveries, Workflows and Impact. Full code, sandbox IDs and detailed tests are optional evidence; onboarding compares actual before/after behavior. Demo connections, releases and business effects are explicitly synthetic/simulated. Impact counts completed synthetic jobs with actions or blocking reasons; manual effort is not labelled realized savings.
+
+`npm.cmd test --prefix backend`: **42 passed**. Frontend production build passed. New coverage includes three different concurrent workflows, partial failure preservation, per-workflow exact approval, old-record migration, recovery of all specifications and rejection of unsupported policies.
+
+Real batch `f74a6db2-dade-4084-b696-83f2448308a6` was started by clicking Connect sample systems in the redesigned UI. It recovered all three specifications via live discovery, then started three model calls together at `2026-11-11T04:53:06.607Z` (invoices one millisecond later). All passed on their first attempt and were re-tested after promotion to the company disk. All forks were stopped.
+
+| Workflow | Version | Sandbox | Independent checks |
+| --- | --- | --- | --- |
+| Onboarding | `b7d59d62-ca1d-4050-a862-a4ee59617dae` | `01a1c8f3-a128-7254-adc9-a8a0746bac73` | 12/12 |
+| Reporting | `80b8b48f-2f0f-4ed2-abc7-207702f7c2e0` | `01a1c8f3-a125-7061-b859-ec8ed81275a8` | 7/7 |
+| Invoices | `eb613d9a-157d-4c1e-b58b-6312b30ee39d` | `01a1c8f3-a126-77fb-b939-fb0048a2a656` | 9/9 |
+
+The product browser check passed at `2026-11-11T04:59:16.258Z`: six real generated-app requests, two per workflow. Each held at the required approval gate, then completed with approval. All three exact-version simulated releases persisted independently after reload. Actual generated UIs differed: onboarding checklist, reporting review desk, invoice/PO routing. Test locators were adjusted for reporting's approval toggle button and invoices' Evaluate routing button; generated files were not modified. No page errors, desktop screenshots inspected, and 390px layouts had no horizontal page overflow.
+
+A separate intercepted-browser contract check verified Connect ? discover ? build-all starts exactly once for a fresh workspace. That orchestration check used synthetic HTTP responses and is distinct from the real batch and six real executions above.
+
+Evidence retained locally: `parallel-workflows.json`, `platform-verification.json` and `platform-*.png` under the company evidence directory. These contain actual run receipts but are excluded from Git. Remote version evidence remains on the company disk. Real network connections, production deployment and realized ROI are not claimed.
+
 ## Current company-loop automated checks
 
 `npm.cmd test --prefix backend`: **36 passed, 0 failed**. In addition to the older lab tests, coverage includes cited discovery/ranking, strict generated-workflow inputs, independent policy/threshold/idempotency checks, fake-transport discover/build/evolve/run/approve, request replay and concurrency, restart interruption, three-attempt repair limits, remote code/source tampering, sandbox HTML headers, generated-form rejection/repair, shutdown during approval, and CLI diagnostic/tool-call handling. Model/disk doubles in these tests are not live-provider evidence.

@@ -1,6 +1,6 @@
 # Platypus workflow lab backend
 
-Local backend for **Platy Builds Platy**. It reads Northstar Agency documents from an Archil disk, discovers and ranks opportunities, generates Python and an HTML application using the host's ChatGPT-authenticated Codex CLI, tests the software in Archil, and evolves it when the supported Finance policy changes. The earlier bundled JavaScript workflow lab remains available separately.
+Local backend for **Platy Builds Platy**. It reads Northstar Agency documents from an Archil disk, discovers and ranks opportunities, builds onboarding, reporting and invoice workflows concurrently in separate Archil forks, generates Python and HTML applications using the host's ChatGPT-authenticated Codex CLI, tests the software in Archil, and evolves it when the supported Finance policy changes. The earlier bundled JavaScript workflow lab remains available separately.
 
 Requires Node 22.19+, Codex CLI with a ChatGPT login, and Archil credentials. Uses native HTTP and SQLite plus the official `disk` SDK pinned to 1.12.1. No OpenAI API key or production connector is used. Subscription limits still apply; there is no automatic API billing fallback.
 
@@ -54,7 +54,7 @@ The bridge harness is at `http://127.0.0.1:4311`. It is a developer test utility
 
 For a genuinely fresh live rehearsal, stop the backend, then run `npm.cmd run reset:company --prefix backend` and restart. Reset first archives the complete company state locally and in `evidence/` on the same disk; then it restores the five synthetic source files and removes the current synthetic policy. Immutable software, execution evidence and older workflow-lab records remain retained. The exclusive owner lock prevents resetting a running backend. Full live discovery and generation take minutes; a 90-second presentation should use clearly labelled saved results or be rehearsed around those waits.
 
-The workflow is `POST /api/company/discover`, then `/build`, then `/evolve` with the exact Finance policy, with `/run` for interactive client execution. Poll `/api/company/jobs/:id`. See the portable [frontend handoff](../FRONTEND-HANDOFF.md) for all schemas and the iframe bridge.
+The platform flow is `POST /api/company/discover`, then `/build-all` for three independent workflows. The older `/build` and `/evolve` paths remain available for onboarding. Call `/evolve` with the exact Finance policy, with `/run` for interactive client execution. Poll `/api/company/jobs/:id`. See the portable [frontend context](../FRONTEND-CONTEXT.md) for all schemas and the iframe bridge.
 
 One persistent company disk holds `company/`, `memory/`, `versions/<id>/selected/` (older runs use `attempt-N/`), `evidence/<id>.json` and `executions/<id>/`. Its identity is saved in `backend/.data/company/disk.json`; `ARCHIL_COMPANY_DISK_ID` optionally selects an existing disk. Each serverless invocation mounts only the selected version read-only plus its own writable execution directory. It explicitly requests deny-all egress on that call; no independent network probe is claimed. It uses Python 3.12, 1 vCPU, 512 MiB and bounded execution/output. Disk storage and execution can incur Archil charges.
 Archil references checked before implementation:

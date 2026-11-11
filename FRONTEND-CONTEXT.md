@@ -10,7 +10,7 @@ The current product story is:
 
 **Connect systems → discovery agents find opportunities → three workflows build concurrently in Archil → review and approve each workflow → see its release and impact.**
 
-The three workflows are **client onboarding, monthly reporting, and invoice approvals**. Each gets its own Archil sandbox fork. These are three different workflows, not three competing implementations of onboarding. That backend change is implemented and undergoing live validation.
+The three workflows are **client onboarding, monthly reporting, and invoice approvals**. Each gets its own Archil sandbox fork. These are three different workflows, not three competing implementations of onboarding. That backend change is implemented and live-verified in Archil.
 
 ## Design direction
 
@@ -72,7 +72,7 @@ Impact should distinguish:
 - Exact-version simulated approval.
 - Interactive generated app execution through a bounded iframe bridge.
 
-The earlier onboarding implementation passed a live three-candidate fork build and product browser verification. That verifies the previous implementation; the new three-different-workflow behavior is still under implementation and must be verified separately.
+The earlier onboarding implementation passed a live three-candidate fork build and product browser verification. The new three-different-workflow build has also passed live: onboarding 12/12 checks, reporting 7/7 and invoices 9/9, each with its own generated tests and stopped sandbox.
 
 ## API integration
 
@@ -114,6 +114,6 @@ Never accept a URL, version override, command or credentials from generated HTML
 
 ## Collaboration now
 
-The current session is rebuilding the platform shell and user flow while backend work adds the three-workflow batch. Helpful parallel contributions are design feedback, copy refinements, workflow-specific presentation ideas, or an agreed separate component. Before changing shared entrypoints/styles, agree on file ownership and get the latest implementation.
+The platform shell and three-workflow batch are implemented. All three generated apps passed live browser checks, with independent simulated approvals and persisted release state. Changes can now continue directly against this implementation. Helpful parallel contributions are design feedback, copy refinements, workflow-specific presentation ideas, or an agreed separate component. Before changing shared entrypoints/styles, agree on file ownership and get the latest implementation.
 
 Acceptance is a clean, rehearsable end-to-end experience. Keep the implementation small. No framework migration, connector OAuth, production deployment, agent swarm visualization or large analytics system is needed for this hackathon.

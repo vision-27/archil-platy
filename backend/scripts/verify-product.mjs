@@ -36,7 +36,7 @@ try{
   await page.getByRole('button',{name:'Enable interactive preview',exact:true}).click();
   const frame=page.frameLocator('#preview-host iframe');
   assert.equal(await page.locator('#preview-host iframe').getAttribute('sandbox'),'allow-scripts');
-  const runButton=frame.getByRole('button',{name:/run/i}).first();
+  const runButton=frame.getByRole('button',{name:/run|evaluate routing/i}).first();
   await runButton.waitFor({timeout:45000});
   const first=await clickAndRead(runButton);
   assert.equal(first.result.versionId,version.id);
@@ -45,7 +45,9 @@ try{
   console.log(`${version.workflowId}: approval gate works through actual generated UI + Archil`);
   await shot(`platform-${version.workflowId}-app.png`);
   const approvalLabel=version.workflowId==='onboarding'?/Finance approv/i:version.workflowId==='reporting'?/Account.*approv/i:/Budget.*approv/i;
-  await frame.getByLabel(approvalLabel).setChecked(true);
+  const checkbox=frame.getByLabel(approvalLabel);
+  if(await checkbox.count()) await checkbox.setChecked(true);
+  else await frame.getByRole('button',{name:/^Account.lead approval/i}).click();
   const second=await clickAndRead(runButton);assert.equal(second.result.output.status,'completed');
   console.log(`${version.workflowId}: approved sample completes through product UI + Archil`);
  }
