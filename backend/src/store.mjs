@@ -35,6 +35,12 @@ export class Store {
   list() { return this.db.prepare('SELECT record FROM runs ORDER BY rowid DESC').all().map(row => JSON.parse(row.record)); }
   getCompany() { const row = this.db.prepare('SELECT record FROM company_state WHERE id=1').get(); return row ? JSON.parse(row.record) : null; }
   saveCompany(state) { this.db.prepare('INSERT INTO company_state VALUES (1,?) ON CONFLICT(id) DO UPDATE SET record=excluded.record').run(JSON.stringify(state)); }
+  findDiscovery(sourceHash) {
+    const current = this.getCompany();
+    if (current?.discoverySourceHash === sourceHash && current.discovery) return current.discovery;
+    const row = this.db.prepare("SELECT json_extract(record,'$.discovery') AS discovery FROM company_history WHERE json_extract(record,'$.discoverySourceHash')=? AND json_type(record,'$.discovery')='object' ORDER BY archived_at DESC LIMIT 1").get(sourceHash);
+    return row ? JSON.parse(row.discovery) : null;
+  }
   resetCompany(id, state) {
     this.db.exec('BEGIN IMMEDIATE');
     try {

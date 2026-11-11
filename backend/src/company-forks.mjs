@@ -113,7 +113,7 @@ export class CompanyForks {
       }));
       pool.runners = results.map((result, index) => {
         if (result.status === 'fulfilled') return result.value;
-        Object.assign(records[index], { status: 'failed', stage: 'failed', summary: 'Archil fork preparation failed; no candidate generated.' }); notify(records[index]);
+        Object.assign(records[index], { status: 'failed', stage: 'failed', summary: 'Archil fork preparation failed; no candidate executed in this fork.' }); notify(records[index]);
         return null;
       });
       requireValue(pool.runners.some(Boolean), 502, 'forks_unavailable', 'No Archil fork could be prepared. Previous software remains available.');

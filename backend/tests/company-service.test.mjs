@@ -13,14 +13,29 @@ test('SQLite rehearsal reset archives atomically and rejects conflicting archive
   const directory = await mkdtemp(join(tmpdir(), 'platy-rehearsal-'));
   const store = new Store(directory);
   try {
-    const previous = { versions: [{ id: 'retained-code' }], jobs: [] }, fresh = { versions: [], jobs: [] };
+    const previous = { versions: [{ id: 'retained-code' }], jobs: [], discoverySourceHash: 'matching-sources', discovery: { retained: true } }, fresh = { versions: [], jobs: [] };
     store.saveCompany(previous);
     const id = crypto.randomUUID(); store.resetCompany(id, fresh);
     assert.deepEqual(store.getCompany(), fresh);
+    assert.deepEqual(store.findDiscovery('matching-sources'), previous.discovery);
+    assert.equal(store.findDiscovery('changed-sources'), null);
     assert.deepEqual(JSON.parse(store.db.prepare('SELECT record FROM company_history WHERE id=?').get(id).record), previous);
     assert.throws(() => store.resetCompany(id, { overwritten: true }));
     assert.deepEqual(store.getCompany(), fresh);
   } finally { store.close(); }
+});
+
+test('matching discovery is revalidated and reused without model calls; corrupt cache falls back live', async () => {
+  const f = await fixture(); await f.run('discover');
+  const cached = structuredClone(f.service.state.discovery), count = f.generations();
+  f.store.findDiscovery = () => cached;
+  f.service.reset({ requestKey: crypto.randomUUID() });
+  const reused = await f.run('discover');
+  assert.equal(reused.status, 'completed'); assert.equal(reused.result.reused, true); assert.equal(f.generations(), count);
+  assert.ok(reused.result.receipts.every(r => r.live === false && r.reused));
+  f.service.reset({ requestKey: crypto.randomUUID() });
+  cached.context.citations[0].quote = 'invented evidence';
+  assert.equal((await f.run('discover')).status, 'completed'); assert.equal(f.generations(), count + 2);
 });
 
 // Fake transport only: no generated code or provider call occurs in these tests.
@@ -249,6 +264,13 @@ async function batchFixture(failInvoice=false) {
  f.disk.executeVersion=async args=>{const value=output(args.prefix,args.input);return value?{output:value,execution:{synthetic:true}}:executeVersion(args);};
  return {...f,maxConcurrent:()=>maxConcurrent};
 }
+
+test('all three model generations start before fork preparation finishes', async () => {
+  const f = await batchFixture(); const prepare = f.forks.prepare, generate = f.model.generate; let started = 0;
+  f.model.generate = args => { started++; return generate(args); };
+  f.forks.prepare = async args => { assert.equal(started, 3); return prepare(args); };
+  const job = await f.run('build-all'); assert.equal(job.status, 'completed'); assert.equal(job.result.successes.length, 3);
+});
 test('new contracts cover human review, missing inputs, idempotency and forbidden actions',()=>{
  for(const id of ['reporting','invoices'])for(const row of workflowCases(id)){
   validateWorkflowInput(id,row.input);const output=businessOutput(id,row.input);assert.equal(checkWorkflowOutput(id,output,row.input).passed,true,row.id);

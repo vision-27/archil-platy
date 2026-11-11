@@ -125,7 +125,7 @@
   const redact = s => String(s == null ? '' : s)
     .replace(/\b(?:sk|pk|rk|ghp|xox[bp])[-_][A-Za-z0-9_-]{10,}/g, '[redacted]')
     .replace(/\b(bearer|token|api[_-]?key|password|secret)(\s*[:=]\s*|\s+)\S+/gi, '$1$2[redacted]');
-  const STAGE_TEXT = { forking: 'Forking the company disk into Archil sandboxes', generating: 'Builder is writing the code', testing: 'Tester is running tests in the Archil sandbox',
+  const STAGE_TEXT = { forking: 'Preparing Archil forks while the model writes code', generating: 'Builder is writing the code', testing: 'Tester is running tests in the Archil sandbox',
     selecting: 'Picking the version that passed', saving: 'Saving the chosen version to the company disk', reading: 'Discovery is reading company files',
     mapping: 'Discovery is mapping workflows', ranking: 'Discovery is ranking opportunities', specifying: 'Discovery is writing the specification' };
 
@@ -140,9 +140,13 @@
     if (j) {
       const kind = j.kind === 'evolve' ? 'evolve' : 'build';
       if (j.status !== 'queued') ev.push({ id: 'b:' + jid + ':start', type: 'build.started', job: jid });
-      if (j.stage === 'testing' || forks.some(f => f.tests)) ev.push({ id: 'b:' + jid + ':test', type: 'test.started', job: jid, forks: forks.length });
+      if (j.stage === 'testing' || forks.some(f => f.stage === 'testing' || f.tests)) ev.push({ id: 'b:' + jid + ':test', type: 'test.started', job: jid, forks: forks.length });
       forks.forEach(f => {
         const lab = f.label || f.id, T = f.tests ? f.tests.passed + '/' + f.tests.total : '';
+        (f.attempts || []).filter(a => !a.passed).forEach(a => {
+          ev.push({ id: 'f:' + f.id + ':attempt:' + a.attempt + ':fail', type: 'test.failed', job: jid, label: lab, tests: a.tests && a.tests.summary ? a.tests.summary.passed + '/' + a.tests.summary.total : '' });
+          if (f.stage === 'repairing') ev.push({ id: 'f:' + f.id + ':attempt:' + a.attempt + ':repair', type: 'build.repairing', job: jid, label: lab });
+        });
         if (f.status === 'failed') {
           ev.push({ id: 'f:' + f.id + ':fail', type: 'test.failed', job: jid, label: lab, tests: T });
           if (running(j) && forks.some(x => x.status === 'running')) ev.push({ id: 'f:' + f.id + ':repair', type: 'build.repairing', job: jid, label: lab });
@@ -163,9 +167,9 @@
 
     // view: everything below is a direct function of backend state
     const forksRunning = forks.filter(f => f.status === 'running');
-    const failedLive = running(j) && forks.some(f => f.status === 'failed') && forksRunning.length > 0;
+    const failedLive = running(j) && forks.some(f => f.status === 'running' && ['repairing', 'test-failure'].includes(f.stage));
     const sandbox = { active: !!(running(j) && (forksRunning.length || (j.stage === 'testing' && !forks.length))), forks, stage: j && j.stage };
-    const testing = sandbox.active && (j.stage === 'testing' || forks.some(f => f.tests));
+    const testing = sandbox.active && (j.stage === 'testing' || forks.some(f => f.status === 'running' && f.stage === 'testing'));
     const lastResult = forks.filter(f => f.tests && f.status !== 'running').slice(-1)[0];
     const rest = {
       disc: running(dj) ? { pos: P.disc.research, pose: 'searching', cls: 'investigating', cue: ['Reading files', ''] } : { pos: P.disc.idle, pose: 'detective' },
@@ -4935,7 +4939,7 @@ class Component extends DCLogic {
     const chips = [];
     let line = '';
     if (mock) { chips.push(chip('Rehearsal mode', 'off')); line = 'Not connected to the backend.'; }
-    else if (C.conn === 'ok') { if (!cap.archilAvailable) chips.push(chip('Archil unavailable', 'warn')); if (!cap.modelAvailable) chips.push(chip('Model unavailable', 'warn')); if (rec.length && !rec.some(r => r.live)) chips.push(chip('Saved run, replayed', 'warn')); }
+    else if (C.conn === 'ok') { if (!cap.archilAvailable) chips.push(chip('Archil unavailable', 'warn')); if (!cap.modelAvailable) chips.push(chip('Model unavailable', 'warn')); if (rec.length && !rec.some(r => r.live)) chips.push(chip(D && D.reused ? 'Discovery reused' : 'Saved run, replayed', 'warn')); }
     else if (C.conn === 'error') { chips.push(chip('Backend not reachable', 'bad')); line = C.connErr; }
     else { chips.push(chip('Connecting…', 'off')); }
     v.co = { show: !!(chips.length || C.setupOpen), chips, line, lineFg: C.conn === 'error' && !mock ? '#a8321f' : '#62665e', bc: C.conn === 'error' && !mock ? '#f3c0b6' : '#e9e5de', bg: '#fffefa',
@@ -4979,7 +4983,7 @@ class Component extends DCLogic {
     v.dsc = Object.assign({}, v.dsc, {
       date: 'Step 2 of 5 · ' + files.length + ' sample exports',
       sub: dRun ? 'Discovering now. ' + ((dj && dj.events && dj.events.length) ? dj.events[dj.events.length - 1].message + '.' : 'Starting…') + (C.autoBuild ? ' Building starts automatically when this finishes.' : '')
-        : (D ? (C.liveDisc ? 'Just discovered from the sample company\'s exports.' : 'Saved results' + (rec.length && rec[rec.length - 1].completedAt ? ' from ' + this.coClock(rec[rec.length - 1].completedAt) : '') + '. Nothing is running.') : 'Platy reads the sample company\'s exports and finds work worth automating.'),
+        : (D ? (D.reused ? 'Reused validated discovery: these company files are unchanged.' : C.liveDisc ? 'Just discovered from the sample company\'s exports.' : 'Saved results' + (rec.length && rec[rec.length - 1].completedAt ? ' from ' + this.coClock(rec[rec.length - 1].completedAt) : '') + '. Nothing is running.') : 'Platy reads the sample company\'s exports and finds work worth automating.'),
       showWk: false,
       flow: files.map((f, i) => { const n = cites.filter(c => c.file === f.name).length, lines = String(f.content || '').split('\n').length; return { label: f.name, value: String(lines), img: P[this.CO_IMGS[i % this.CO_IMGS.length]], sub: n ? 'lines · cited ' + n + '×' : 'lines', dot: n ? '#ed652e' : '#9a9e94', c: '#262924', go: openDoc(f.name, 0) }; }),
       hasDoc: !!doc, doc: doc ? { name: doc.name, sha: this.coShort(doc.sha256), cited: String(Object.keys(marks).length), lines: this.coLines(doc.content, marks), close: setC({ doc: null }) } : { lines: [] },
@@ -5015,7 +5019,7 @@ class Component extends DCLogic {
       v.spec = { isSel, hasSpec: !!(S && isSel), notSel: !isSel, head: S && isSel ? S.name : 'Selected: ' + ((D && D.selectedOpportunity && D.selectedOpportunity.name) || 'another opportunity'), selName: (D && D.selectedOpportunity && D.selectedOpportunity.name) || 'another opportunity', openSel: openOpp(selId),
         name: S ? S.name : '', trigger: S ? S.trigger : '', inputs: S ? (S.inputs || []).map(t => ({ t })) : [], actions: S ? (S.actions || []).map((t, i) => ({ t, n: String(i + 1) })) : [], success: S ? (S.successCriteria || []).map(t => ({ t })) : [],
         approval: S ? (S.approvalRequired ? 'Yes, a person approves each run' : 'No') : '', sources: S ? (S.sourceFiles || []).join(', ') : '',
-        receipt: mock ? '' : rec.length ? (rec.some(r => r.live) ? 'Live model · ' + rec.map(r => r.model).filter(Boolean).join(', ') : 'Saved run, replayed') : (mock ? 'UI mock data' : ''),
+        receipt: mock ? '' : rec.length ? (D.reused ? 'Reused discovery for unchanged sources' : rec.some(r => r.live) ? 'Live model · ' + rec.map(r => r.model).filter(Boolean).join(', ') : 'Saved run, replayed') : (mock ? 'UI mock data' : ''),
         btn: bRun ? 'Building… ' + this.coElapsed(bj) : (C.lost.build ? 'Retry the build' : (built ? 'See the workflows' : 'Build the workflows')), spin: bRun, busy: bRun ? 'true' : 'false',
         err: C.errs.build || '', hasErr: !!C.errs.build,
         act: () => { if (!built) this.coBuild(); this.coTab('build')(); } };

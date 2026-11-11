@@ -53,3 +53,18 @@ export async function discoverCompany({model,files}){
   if(!selected||selected.sourceFiles.some(name=>!Object.hasOwn(files,name)))throw new HttpError(502,'invalid_specification','No valid specification for the selected opportunity.');
   return {...first.value,opportunities,selectedOpportunity,specification:selected,specifications:second.value.specifications,receipts:[first.receipt,second.receipt]};
 }
+
+// Reuse only a source-hash match supplied by the store, and revalidate its evidence.
+export function reuseDiscovery(saved, files) {
+  const mapping = { context: saved.context, workflows: saved.workflows };
+  const plan = { opportunities: saved.opportunities.map(({ monthlyHours, score, ...row }) => row), specifications: saved.specifications };
+  validateShape(mapping, object({context, workflows:{type:'array',items:workflow,minItems:1}}));
+  validateShape(plan, object({opportunities:{type:'array',items:opportunity,minItems:1},specifications:{type:'array',items:specification,minItems:1}}));
+  validateCitations(mapping, files); validateCitations(plan, files);
+  const opportunities = rankOpportunities(plan.opportunities, files), selectedOpportunity = opportunities[0];
+  if (opportunities.some(o => !mapping.workflows.some(w => w.id === o.workflowId)) || plan.specifications.some(s => !mapping.workflows.some(w => w.id === s.workflow) || s.sourceFiles.some(name => !Object.hasOwn(files, name)))) throw new HttpError(502, 'invalid_cached_discovery', 'Saved discovery does not match the company sources.');
+  const selected = plan.specifications.find(s => s.workflow === selectedOpportunity.workflowId);
+  if (!selected) throw new HttpError(502, 'invalid_cached_discovery', 'Saved discovery is missing the selected specification.');
+  return { ...mapping, opportunities, selectedOpportunity, specification: selected, specifications: plan.specifications,
+    reused: true, receipts: (saved.receipts || []).map(r => ({ ...r, live: false, reused: true })) };
+}

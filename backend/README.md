@@ -20,6 +20,8 @@ SQLite records and retained artifacts live in `backend/.data/`. Set `PLATY_DATA_
 
 The supplied frontend starts a fresh rehearsal on each normal page load with `POST /api/company/reset` and `{ "requestKey": "<UUID>" }`, using the same demo header as other mutations. Reset atomically archives the previous state in SQLite's `company_history` table and clears discovery, jobs, versions, approvals and the synthetic policy from the current rehearsal. Immutable Archil code and execution artifacts remain. The next discovery restores the five source files and removes the previous policy from the disk. Reset itself starts no model or Archil execution. Busy jobs reject reset and the frontend resumes them. Use `/?resume=1` to inspect existing results deliberately.
 
+Repeated discovery reads the current files from Archil and looks for previously generated discovery with the exact same source hash. Cached schemas, citations, workflow references and rankings are revalidated before reuse; the UI labels this as reused discovery and receipts mark `live: false, reused: true`. Changed sources or invalid cached evidence require fresh model inference. A new checkout without local history runs discovery live once. Builds still generate new code and run real Archil tests every time. Their three model calls now start while Archil prepares the forks, and generation asks for compact applications to reduce output latency. Generated and independent acceptance tests, source verification and promotion checks remain required.
+
 ## Configure Archil
 
 Create `.env` in the repository root using `.env.example`:
