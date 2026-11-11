@@ -18,6 +18,8 @@ Health: http://127.0.0.1:4310/health
 
 SQLite records and retained artifacts live in `backend/.data/`. Set `PLATY_DATA_DIR` to a different directory for an independent rehearsal. One server owns a data directory at a time, and only one experiment runs at a time. Shutdown waits for active work; crash recovery marks unfinished work interrupted and never reruns it automatically.
 
+The supplied frontend starts a fresh rehearsal on each normal page load with `POST /api/company/reset` and `{ "requestKey": "<UUID>" }`, using the same demo header as other mutations. Reset atomically archives the previous state in SQLite's `company_history` table and clears discovery, jobs, versions, approvals and the synthetic policy from the current rehearsal. Immutable Archil code and execution artifacts remain. The next discovery restores the five source files and removes the previous policy from the disk. Reset itself starts no model or Archil execution. Busy jobs reject reset and the frontend resumes them. Use `/?resume=1` to inspect existing results deliberately.
+
 ## Configure Archil
 
 Create `.env` in the repository root using `.env.example`:

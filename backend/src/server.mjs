@@ -44,6 +44,7 @@ export function createApp(service, company) {
       const path = url.pathname;
       if (req.method === 'GET' && path === '/health') return send(200, { status: 'ok', service: 'platypus-workflow-lab', localOnly: true });
       if (company && path === '/api/company' && req.method === 'GET') return send(200, company.workspace());
+      if (company && path === '/api/company/reset' && req.method === 'POST') return send(200, company.reset(await readJSON(req)));
       const operation = /^\/api\/company\/(discover|build-all|build|evolve|run)$/.exec(path);
       if (company && operation && req.method === 'POST') return send(202, company.start(operation[1], await readJSON(req)));
       const jobMatch = /^\/api\/company\/jobs\/([a-f0-9-]{36})$/.exec(path);

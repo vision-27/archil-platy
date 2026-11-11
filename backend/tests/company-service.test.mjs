@@ -4,6 +4,24 @@ import { CompanyService } from '../src/company-service.mjs';
 import { ACTIONS, CONTRACT, POLICY, acceptanceCases, checkOutput, validateInput } from '../src/company-checks.mjs';
 import { loadCompanyFiles } from '../src/discovery.mjs';
 import { createApp } from '../src/server.mjs';
+import { Store } from '../src/store.mjs';
+import { mkdtemp } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+
+test('SQLite rehearsal reset archives atomically and rejects conflicting archive IDs without data loss', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'platy-rehearsal-'));
+  const store = new Store(directory);
+  try {
+    const previous = { versions: [{ id: 'retained-code' }], jobs: [] }, fresh = { versions: [], jobs: [] };
+    store.saveCompany(previous);
+    const id = crypto.randomUUID(); store.resetCompany(id, fresh);
+    assert.deepEqual(store.getCompany(), fresh);
+    assert.deepEqual(JSON.parse(store.db.prepare('SELECT record FROM company_history WHERE id=?').get(id).record), previous);
+    assert.throws(() => store.resetCompany(id, { overwritten: true }));
+    assert.deepEqual(store.getCompany(), fresh);
+  } finally { store.close(); }
+});
 
 // Fake transport only: no generated code or provider call occurs in these tests.
 function outputFor(input, policy) {
@@ -16,12 +34,14 @@ function outputFor(input, policy) {
 }
 async function fixture() {
   const files = await loadCompanyFiles(); let saved = null;
-  const store = { getCompany: () => structuredClone(saved), saveCompany: state => { saved = structuredClone(state); } };
+  const archives = new Map();
+  const store = { getCompany: () => structuredClone(saved), saveCompany: state => { saved = structuredClone(state); }, resetCompany: (id, state) => { archives.set(id, structuredClone(saved)); saved = structuredClone(state); } };
   const objects = new Map(); const evidence = new Map(); let writes = 0;
   const disk = {
     ensure: async () => ({ id: 'test-disk', region: 'test' }),
     writeCompanyFiles: async entries => { writes++; for (const [name, content] of Object.entries(entries)) objects.set(`company/${name}`, content); },
     readCompanyFiles: async names => Object.fromEntries(names.map(name => [name, objects.get(`company/${name}`)])),
+    removePolicy: async () => { objects.delete('company/policy_update.md'); },
     saveMemory: async () => {}, saveEvidence: async (id, value) => evidence.set(id, structuredClone(value)),
     putFiles: async (prefix, entries) => { for (const [name, content] of Object.entries(entries)) objects.set(`${prefix}/${name}`, content); },
     getFile: async path => objects.get(path), testVersion: async () => ({ exitCode: 0, stdout: 'fake transport', execution: { diskId: 'test-disk' } }),
@@ -45,8 +65,32 @@ async function fixture() {
   } };
   const service = new CompanyService({ store, model, disk, forks, sourceFiles: files });
   const run = async (kind, extra = {}) => { const { job } = service.start(kind, { requestKey: `test-${crypto.randomUUID()}`, ...extra }); await service.idle(); return service.job(job.id); };
-  return { service, store, disk, forks, model, objects, evidence, files, run, generations: () => generations, writes: () => writes, closed: () => closed };
+  return { service, store, disk, forks, model, objects, evidence, files, run, archives, generations: () => generations, writes: () => writes, closed: () => closed };
 }
+
+test('fresh rehearsal archives evidence, resets real state, and does not start inference', async () => {
+  const f = await fixture();
+  await f.run('discover'); await f.run('build'); await f.run('evolve', { policyText: POLICY });
+  const previous = f.service.workspace(), count = f.generations(), requestKey = crypto.randomUUID();
+  const fresh = f.service.reset({ requestKey });
+  assert.equal(f.archives.get(requestKey).versions.length, previous.versions.length);
+  assert.deepEqual(fresh.versions, []); assert.deepEqual(fresh.jobs, []); assert.equal(fresh.discovery, null);
+  assert.deepEqual(fresh.activeVersions, {}); assert.equal(fresh.files.length, 5);
+  assert.equal(f.generations(), count);
+  assert.deepEqual(f.service.reset({ requestKey }), fresh); assert.equal(f.archives.size, 1);
+  assert.ok([...f.objects.keys()].some(k => k.endsWith('/workflow.py')), 'immutable code retained');
+  await f.run('discover'); assert.equal(f.objects.has('company/policy_update.md'), false);
+});
+
+test('refresh never resets a running job and failed archive leaves current state intact', async () => {
+  const f = await fixture(); const { job } = f.service.start('discover', { requestKey: crypto.randomUUID() });
+  assert.throws(() => f.service.reset({ requestKey: crypto.randomUUID() }), e => e.code === 'company_busy');
+  await f.service.idle(); assert.equal(f.service.job(job.id).status, 'completed');
+  const before = f.service.workspace();
+  f.store.resetCompany = () => { throw new Error('archive failed'); };
+  assert.throws(() => f.service.reset({ requestKey: crypto.randomUUID() }), /archive failed/);
+  assert.deepEqual(f.service.workspace(), before);
+});
 
 test('independent checks catch unsafe approval, threshold, duplicates and fabricated checklist', () => {
   const high = structuredClone(CONTRACT.input);
@@ -184,6 +228,9 @@ test('company HTTP routes preserve JSON guards and sandbox generated HTML', asyn
   assert.equal(preview.status, 200); assert.match(preview.headers.get('content-security-policy'), /sandbox allow-scripts/); assert.match(preview.headers.get('content-security-policy'), /connect-src 'none'/);
   const denied = await fetch(`${base}/api/company/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); assert.equal(denied.status, 403);
   const bad = await fetch(`${base}/api/company/run`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Platy-Demo': '1' }, body: JSON.stringify({ requestKey: 'bad-input', versionId: build.result.versionId, input: {} }) }); assert.equal(bad.status, 400);
+  const deniedReset = await fetch(`${base}/api/company/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); assert.equal(deniedReset.status, 403);
+  const reset = await fetch(`${base}/api/company/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Platy-Demo': '1' }, body: JSON.stringify({ requestKey: crypto.randomUUID() }) });
+  assert.equal(reset.status, 200); assert.deepEqual((await reset.json()).versions, []); assert.equal(f.archives.size, 1);
 });
 import { WORKFLOWS, expectedWorkflow, workflowActions, workflowCases, checkWorkflowOutput, validateWorkflowInput, inferWorkflow } from '../src/workflow-contracts.mjs';
 function businessOutput(id,input) {

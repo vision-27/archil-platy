@@ -33,6 +33,7 @@ export class CompanyService {
   }
   constructor({ store, config = {}, model, disk, forks, sourceFiles }) {
     this.store = store;
+    this.sourceFiles = structuredClone(sourceFiles);
     this.model = model ?? new CodexModel({ model: config.model || 'gpt-6.1-sol' });
     this.disk = disk ?? new CompanyDisk({ ...config.archil, directory: join(config.directory, 'company') });
     this.forks = forks ?? new CompanyForks(config.archil);
@@ -60,6 +61,21 @@ export class CompanyService {
   }
   save() { this.store.saveCompany(this.state); }
   workspace() { const result = structuredClone(this.state); delete result.seeded; return result; }
+  reset(input) {
+    requireValue(exactObject(input, ['requestKey']) && /^[a-f0-9-]{36}$/.test(input.requestKey ?? ''), 400, 'invalid_request', 'Supply a UUID requestKey for this rehearsal.');
+    if (this.state.rehearsalId === input.requestKey) return this.workspace();
+    requireValue(!this.closing && !this.busy(), 409, 'company_busy', 'A workflow is still running. This refresh resumes it instead of interrupting it.');
+    const next = {
+      company: structuredClone(this.state.company), files: fileRows(this.sourceFiles),
+      disk: this.state.disk, discovery: null, versions: [], jobs: [],
+      activeVersionId: null, latestCandidateId: null, activeVersions: {}, latestCandidates: {},
+      seeded: false, resetPolicy: true, rehearsalId: input.requestKey,
+      capabilities: structuredClone(this.state.capabilities)
+    };
+    this.store.resetCompany(input.requestKey, next);
+    this.state = next;
+    return this.workspace();
+  }
   job(id) { const job = this.state.jobs.find(row => row.id === id); requireValue(job, 404, 'job_not_found', 'Company job not found.'); return job; }
   version(id) { const version = this.state.versions.find(row => row.id === id); requireValue(version, 404, 'version_not_found', 'Software version not found.'); return version; }
   event(job, stage, message) { job.stage = stage; job.events.push({ sequence: job.events.length + 1, at: now(), message }); this.save(); }
@@ -96,6 +112,7 @@ export class CompanyService {
     this.state.disk = await this.disk.ensure();
     if (!this.state.seeded) {
       await this.disk.writeCompanyFiles(filesObject(this.state.files));
+      if (this.state.resetPolicy) { await this.disk.removePolicy(); delete this.state.resetPolicy; }
       this.state.seeded = true; this.save();
     }
     const files = await this.disk.readCompanyFiles(this.state.files.map(row => row.name));

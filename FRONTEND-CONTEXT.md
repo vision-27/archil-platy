@@ -12,16 +12,18 @@ The current product story is:
 
 The three workflows are **client onboarding, monthly reporting, and invoice approvals**. Each gets its own Archil sandbox fork. These are three different workflows, not three competing implementations of onboarding. That backend change is implemented and live-verified in Archil.
 
-## Design direction
+## Current frontend
 
-The previous UI felt like a hardcoded hackathon walkthrough. It exposed too many files, logs, tests, hashes and version numbers. The redesign should feel like a calm, useful operating platform.
+The active UI is the complete supplied Platyform Archil export. Keep its layout, typography, mascot artwork and workshop animation intact. Desktop is the target; no mobile optimization work is required.
 
-- Persistent workspace sidebar: Connections, Discoveries, Workflows, Impact.
-- Restrained neutral colors, subtle green accents, generous space and compact typography. Use the Platy mascot sparingly.
-- One obvious next action per screen. Put code, source citations, sandbox IDs and full test evidence in optional details.
-- Show business outcomes first: “Waiting for Finance approval” is more useful than a raw status enum or a test table.
-- Make it clear what Platy is doing automatically, what is ready for review, and what still needs a person.
-- Use real backend state. No invented progress percentages, test results, build success or live activity.
+- Entry point and custom component logic: `frontend/index.html`.
+- Supplied runtime and assets: `frontend/public/support.js` and `frontend/public/img/`.
+- Vite serves the export directly and proxies `/api` and `/health` to the backend. The supplied runtime loads its `text/x-dc` component from the HTML; do not convert that script to a normal module.
+- Company, Discover, Build, Test and Evolve screens use the real company API. The previous React/custom frontend has been removed.
+- A normal page load or refresh starts a new synthetic rehearsal via `POST /api/company/reset`. Previous state is archived in SQLite; immutable Archil artifacts remain. Reset starts no model calls. An active job is resumed rather than interrupted.
+- Use `?resume=1` deliberately to inspect the current rehearsal without resetting it. `?mock=1` remains an explicitly labelled UI-only preview.
+- Click **Discover and build** to run live discovery, then automatically build three different workflows concurrently. Approvals remain simulated, with no external business actions.
+- Impact counts come from completed synthetic execution records in the current rehearsal. Manual effort is an estimate from source timesheets; realized savings remain unmeasured.
 
 ### Connections
 

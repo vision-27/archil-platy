@@ -80,6 +80,11 @@ export class CompanyDisk {
       return [name, Buffer.from(bytes).toString('utf8')];
     })));
   }
+  async removePolicy() {
+    await this.ensure();
+    try { await this.disk.deleteObject('company/policy_update.md'); }
+    catch (error) { if (!(error.status === 404 || error.statusCode === 404 || error.code === 'NoSuchKey')) throw error; }
+  }
   async saveEvidence(versionId, value) {
     if (!/^[a-f0-9-]{36}$/.test(versionId)) throw new Error('Invalid version ID.');
     await this.ensure();
